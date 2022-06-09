@@ -32,7 +32,7 @@ setup(
                  extra_compile_args=['-std=c++11', '-Wcpp'],
                  language="c++")],
     scripts=[],
-    py_modules=['eif_old', 'version'],
+    py_modules=['eif_new', 'eif_old', 'version'],
     packages=[],
     license='License.txt',
     include_package_data=True,
