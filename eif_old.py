@@ -59,7 +59,7 @@ class iForest(object):
     compute_paths(X_in)
         Computes the anomaly score for data X_in
     """
-    def __init__(self, X, ntrees,  sample_size, limit=None, ExtensionLevel=0):
+    def __init__(self, X, ntrees, sample_size, limit=None, ExtensionLevel=0, random_state=None):
         """
         iForest(X, ntrees,  sample_size, limit=None, ExtensionLevel=0)
         Initialize a forest by passing in training data, number of trees to be used and the subsample size.
@@ -77,6 +77,9 @@ class iForest(object):
         ExtensionLevel : int
             Specifies degree of freedom in choosing the hyperplanes for dividing up data. Must be smaller than the dimension n of the dataset.
         """
+        # define random seed
+        if random_state is not None:
+            np.random.seed(random_state)
 
         self.ntrees = ntrees
         self.X = X
