@@ -82,6 +82,7 @@ class iForest(object):
             np.random.seed(random_state)
 
         self.ntrees = ntrees
+        self.threshold = 0.5
         self.X = X
         self.nobjs = len(X)
         self.sample = sample_size
@@ -132,6 +133,14 @@ class iForest(object):
             Eh = h_temp/self.ntrees                                             # Average of path length travelled by the point in all trees.
             S[i] = 2.0**(-Eh/self.c)                                            # Anomaly Score
         return S
+
+    def score_samples(self, X):
+        """Alias for compute_paths(X), for compatibility
+        """
+        return self.compute_paths(X)
+
+    def score_threshold(self):
+        return self.threshold
 
 class Node(object):
     """
