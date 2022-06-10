@@ -107,7 +107,7 @@ class iForest(object):
     score_samples(X)
         Computes the anomaly scores for data X. 
     """
-    def __init__(self, ntrees=200, sample=256, limit=None, exlevel=None, random_state=None):
+    def __init__(self, ntrees=200, sample=256, limit=None, exlevel=None, random_state=None, contamination=None):
 
         # define random seed
         if random_state is not None:
@@ -116,8 +116,9 @@ class iForest(object):
         self.sample = sample
         self.limit = limit
         self.ntrees = ntrees
-        self.compute_paths = self.score_samples#_using_childs
+        self.compute_paths = self.score_samples  # _using_childs
         self.cut_off_ = 0.5
+        self.contamination = contamination
         
     def fit_predict(self, X):
         """Return array with outlier predictions: normal (False) and outlier (True)."""
@@ -158,13 +159,27 @@ class iForest(object):
         # populate trees
         dtype = [("n", "%sf2"%self.dim), ("pdotn", "f2"), ("size", "u2")]#, ("left", "u2"), ("right", "u2")]
         self.trees = np.zeros((self.ntrees, maxnodes), dtype=dtype)
+        train_idx = set()
         for treei in range(self.ntrees): 
             idx = np.random.choice(X.shape[0], self.sample, replace=False)
             self.populate_nodes(X[idx], treei)
+            if self.contamination is not None:
+                train_idx = train_idx.union(set(idx))
+
+        # Calculate score threshold
+        if self.contamination is not None:
+            scores_train = self.score_samples(X[list(train_idx)])
+            self.cut_off_ = np.percentile(scores_train, 100.0 * (1.0 - self.contamination))
+
         # clean-up
         del self.normal, self.uniform
         if self.dim-self.exlevel-1: del self.choice
         return self
+
+    def score_threshold(self):
+        """Returns the decision threshold of the fitted model. By default is 0.5.
+        """
+        return self.cut_off_
 
     def populate_nodes(self, X, treei, nodei=0, e=0):
         """Builds the tree recursively from a given node (e). 
