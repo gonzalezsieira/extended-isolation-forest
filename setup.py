@@ -1,4 +1,3 @@
-import sys
 import os
 import numpy
 from Cython.Distutils import build_ext
