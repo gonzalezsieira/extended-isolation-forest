@@ -10,6 +10,7 @@ import numpy as np
 import random as rn
 import os
 import warnings
+from numba import jit
 from version import __version__
 
 
@@ -108,6 +109,7 @@ class iForest(object):
         if self.exlevel > dim-1:
             raise Exception("Your data has "+ str(dim) + " dimensions. Extension level can't be higher than " + str(dim-1) + ".")
 
+    @jit(parallell=True)
     def compute_paths(self, X_in = None):
         """
         compute_paths(X_in = None)
