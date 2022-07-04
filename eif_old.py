@@ -10,11 +10,12 @@ import numpy as np
 import random as rn
 import os
 import warnings
-from numba import jit
+from numba import jit, njit
 from version import __version__
 
 
-def c_factor(n) :
+@njit
+def c_factor(n):
     """
     Average path length of unsuccesful search in a binary search tree given n points
     
@@ -109,7 +110,6 @@ class iForest(object):
         if self.exlevel > dim-1:
             raise Exception("Your data has "+ str(dim) + " dimensions. Extension level can't be higher than " + str(dim-1) + ".")
 
-    @jit(parallell=True)
     def compute_paths(self, X_in = None):
         """
         compute_paths(X_in = None)
@@ -128,7 +128,7 @@ class iForest(object):
         if X_in is None:
             X_in = self.X
         S = np.zeros(len(X_in))
-        for i in  range(len(X_in)):
+        for i in range(len(X_in)):
             h_temp = 0
             for j in range(self.ntrees):
                 h_temp += PathFactor(X_in[i],self.Trees[j]).path*1.0            # Compute path length for each point
@@ -333,6 +333,7 @@ class PathFactor(object):
         self.e = 0
         self.path  = self.find_path(itree.root)
 
+    @jit
     def find_path(self,T):
         """
         find_path(T)
