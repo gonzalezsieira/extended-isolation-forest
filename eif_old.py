@@ -1,19 +1,14 @@
-""" Extended Isolation forest functions
-
-This is the implementation of the Extended Isolation Forest anomaly detection algorithm. This extension, improves the consistency and reliability of the anomaly score produced by standard Isolation Forest represented by Liu et al.
-Our method allows for the slicing of the data to be done using hyperplanes with random slopes which results in improved score maps. The consistency and reliability of the algorithm is much improved using this extension.
-
+"""
+Implementation of the Extended Isolation Forest anomaly detection algorithm. 
 """
 
-__author__ = 'Matias Carrasco Kind & Sahand Hariri'
+__author__ = 'Matias Carrasco Kind & Sahand Hariri & Adrián González Sieira'
 import numpy as np
 import random as rn
-import os
-import warnings
 from version import __version__
 
 
-def c_factor(n) :
+def c_factor(n):
     """
     Average path length of unsuccesful search in a binary search tree given n points
     
