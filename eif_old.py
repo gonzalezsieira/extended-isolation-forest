@@ -92,6 +92,9 @@ class iForest(object):
             X_p = X[ix]
             self.Trees.append(iTree(X_p, 0, self.limit, exlevel=self.exlevel))
 
+        # Propose decision threshold based on contamination
+        self.scores = self.score_samples(X)
+
     def CheckExtensionLevel(self, X):
         """
         This function makes sure the extension level provided by the user does not exceed the dimension of the data. An exception will be raised in the case of a violation.
