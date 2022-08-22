@@ -83,13 +83,12 @@ class iForest(object):
 
         self.ntrees = ntrees
         self.threshold = 0.5
-        self.X = X
         self.nobjs = len(X)
         self.sample = sample_size
         self.Trees = []
         self.limit = limit
         self.exlevel = ExtensionLevel
-        self.CheckExtensionLevel()                                              # Extension Level check. See def for explanation.
+        self.CheckExtensionLevel(X)                                              # Extension Level check. See def for explanation.
         if limit is None:
             self.limit = int(np.ceil(np.log2(self.sample)))                     # Set limit to the default as specified by the paper (average depth of unsuccesful search through a binary tree).
         self.c = c_factor(self.sample)
@@ -98,11 +97,11 @@ class iForest(object):
             X_p = X[ix]
             self.Trees.append(iTree(X_p, 0, self.limit, exlevel=self.exlevel))
 
-    def CheckExtensionLevel(self):
+    def CheckExtensionLevel(self, X):
         """
         This function makes sure the extension level provided by the user does not exceed the dimension of the data. An exception will be raised in the case of a violation.
         """
-        dim = self.X.shape[1]
+        dim = X.shape[1]
         if self.exlevel < 0:
             raise Exception("Extension level has to be an integer between 0 and "+ str(dim-1)+".")
         if self.exlevel > dim-1:
@@ -123,10 +122,8 @@ class iForest(object):
         float
             Anomaly score for a given data point.
         """
-        if X_in is None:
-            X_in = self.X
         S = np.zeros(len(X_in))
-        for i in  range(len(X_in)):
+        for i in range(len(X_in)):
             h_temp = 0
             for j in range(self.ntrees):
                 h_temp += PathFactor(X_in[i],self.Trees[j]).path*1.0            # Compute path length for each point
@@ -187,7 +184,6 @@ class Node(object):
         """
         self.e = e
         self.size = len(X)
-        self.X = X # to be removed
         self.n = n
         self.p = p
         self.left = left
@@ -248,9 +244,8 @@ class iTree(object):
         """
         self.exlevel = exlevel
         self.e = e
-        self.X = X                                                              #save data for now. Not really necessary.
         self.size = len(X)
-        self.dim = self.X.shape[1]
+        self.dim = X.shape[1]
         self.Q = np.arange(np.shape(X)[1], dtype='int')                         # n dimensions
         self.l = l
         self.p = None                                                           # Intercept for the hyperplane for splitting data at a given node.
