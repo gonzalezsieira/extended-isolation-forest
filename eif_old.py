@@ -54,7 +54,7 @@ class iForest(object):
     compute_paths(X_in)
         Computes the anomaly score for data X_in
     """
-    def __init__(self, X, ntrees, sample_size, limit=None, ExtensionLevel=0, random_state=None):
+    def __init__(self, X, ntrees, sample_size, limit=None, ExtensionLevel=0, random_state=None, contamination=None):
         """
         iForest(X, ntrees,  sample_size, limit=None, ExtensionLevel=0)
         Initialize a forest by passing in training data, number of trees to be used and the subsample size.
@@ -93,7 +93,10 @@ class iForest(object):
             self.Trees.append(iTree(X_p, 0, self.limit, exlevel=self.exlevel))
 
         # Propose decision threshold based on contamination
-        self.scores = self.score_samples(X)
+        if contamination is not None:
+            self.scores = self.score_samples(X)
+            # Get threshold, which is the score is the score that leaves contamination (pct.) data to the left
+            self.threshold = np.quantile(np.array(self.scores), 1 - contamination)
 
     def CheckExtensionLevel(self, X):
         """
