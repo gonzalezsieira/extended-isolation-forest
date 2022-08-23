@@ -46,6 +46,10 @@ class iForest(object):
         Exention level to be used in the creating splitting critera.
     c: float
         Multiplicative factor used in computing the anomaly scores.
+    threshold: float
+        threshold used to decide if something is an anomaly or not.
+    scores: list
+        list of scores from the data used to generate the forest.
 
     Methods
     -------
@@ -54,9 +58,9 @@ class iForest(object):
     compute_paths(X_in)
         Computes the anomaly score for data X_in
     """
-    def __init__(self, X, ntrees, sample_size, limit=None, ExtensionLevel=0, random_state=None, contamination=None):
+    def __init__(self, X, ntrees, sample_size, limit=None, ExtensionLevel=0, random_state=None, calculate_scores=True, contamination=None):
         """
-        iForest(X, ntrees,  sample_size, limit=None, ExtensionLevel=0)
+        iForest(X, ntrees,  sample_size, limit=None, ExtensionLevel=0, random_state=None, calculate_scores=True, contamination=None)
         Initialize a forest by passing in training data, number of trees to be used and the subsample size.
 
         Parameters
@@ -71,6 +75,12 @@ class iForest(object):
             The maximum allowed tree depth. This is by default set to average length of unsucessful search in a binary tree.
         ExtensionLevel : int
             Specifies degree of freedom in choosing the hyperplanes for dividing up data. Must be smaller than the dimension n of the dataset.
+        random_state : int
+            Seed used for the generation of random numbers
+        calculate_scores : boolean
+            Flag to calculate the scores used to train the model (not needed if the decision threshold is set manually). Defaults as True.
+        contamination : float
+            The contamination is the quantile of data that is estimated to be anomalous 
         """
         # define random seed
         if random_state is not None:
@@ -92,11 +102,13 @@ class iForest(object):
             X_p = X[ix]
             self.Trees.append(iTree(X_p, 0, self.limit, exlevel=self.exlevel))
 
+        # Score samples
+        if calculate_scores:
+            self.scores = self.score_samples(X)
+
         # Propose decision threshold based on contamination
         if contamination is not None:
-            self.scores = self.score_samples(X)
-            # Get threshold, which is the score is the score that leaves contamination (pct.) data to the left
-            self.threshold = np.quantile(np.array(self.scores), 1 - contamination)
+            self.update_threshold(contamination)
 
     def CheckExtensionLevel(self, X):
         """
@@ -108,6 +120,13 @@ class iForest(object):
         if self.exlevel > dim-1:
             raise Exception("Your data has "+ str(dim) + " dimensions. Extension level can't be higher than " + str(dim-1) + ".")
 
+    def update_threshold(self, contamination):
+        """
+        Updates the threshold provided that the scores are calculated the new contamination parameter.
+        """
+        if self.scores is not None:
+            self.threshold = np.quantile(np.array(self.scores), 1 - contamination)
+    
     def compute_paths(self, X_in = None):
         """
         compute_paths(X_in = None)
