@@ -97,14 +97,18 @@ class iForest(object):
         if limit is None:
             self.limit = int(np.ceil(np.log2(self.sample)))                     # Set limit to the default as specified by the paper (average depth of unsuccesful search through a binary tree).
         self.c = c_factor(self.sample)
+        
+        ix_sampled = set()                                                      # This stores the indices of the training samples
         for i in range(self.ntrees):                                            # This loop builds an ensemble of iTrees (the forest).
             ix = rn.sample(range(self.nobjs), self.sample)
+            ix_sampled = ix_sampled.union(ix)                                   # This updates the indices of the training samples set
             X_p = X[ix]
             self.Trees.append(iTree(X_p, 0, self.limit, exlevel=self.exlevel))
 
+        ix_sampled = list(ix_sampled)                                           # Convert to list
         # Score samples
         if calculate_scores:
-            self.scores = self.score_samples(X)
+            self.scores = self.score_samples(X[ix_sampled])                     # Evaluates only the examples used to build the trees
 
         # Propose decision threshold based on contamination
         if contamination is not None:
