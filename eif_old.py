@@ -87,7 +87,6 @@ class iForest(object):
             np.random.seed(random_state)
 
         self.ntrees = ntrees
-        self.threshold = 0.5
         self.nobjs = len(X)
         self.sample = sample_size
         self.Trees = []
@@ -113,6 +112,9 @@ class iForest(object):
         # Propose decision threshold based on contamination
         if contamination is not None:
             self.update_threshold(contamination)
+        else:
+            self.contamination = None
+            self.threshold = 0.5
 
     def CheckExtensionLevel(self, X):
         """
@@ -129,6 +131,7 @@ class iForest(object):
         Updates the threshold provided that the scores are calculated the new contamination parameter.
         """
         if self.scores is not None:
+            self.contamination = contamination
             self.threshold = np.quantile(np.array(self.scores), 1 - contamination)
     
     def compute_paths(self, X_in = None):
