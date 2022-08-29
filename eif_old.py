@@ -1,19 +1,14 @@
-""" Extended Isolation forest functions
-
-This is the implementation of the Extended Isolation Forest anomaly detection algorithm. This extension, improves the consistency and reliability of the anomaly score produced by standard Isolation Forest represented by Liu et al.
-Our method allows for the slicing of the data to be done using hyperplanes with random slopes which results in improved score maps. The consistency and reliability of the algorithm is much improved using this extension.
-
+"""
+Implementation of the Extended Isolation Forest anomaly detection algorithm. 
 """
 
-__author__ = 'Matias Carrasco Kind & Sahand Hariri'
+__author__ = 'Matias Carrasco Kind & Sahand Hariri & Adrián González Sieira'
 import numpy as np
 import random as rn
-import os
-import warnings
 from version import __version__
 
 
-def c_factor(n) :
+def c_factor(n):
     """
     Average path length of unsuccesful search in a binary search tree given n points
     
@@ -51,6 +46,10 @@ class iForest(object):
         Exention level to be used in the creating splitting critera.
     c: float
         Multiplicative factor used in computing the anomaly scores.
+    threshold: float
+        threshold used to decide if something is an anomaly or not.
+    scores: list
+        list of scores from the data used to generate the forest.
 
     Methods
     -------
@@ -59,9 +58,9 @@ class iForest(object):
     compute_paths(X_in)
         Computes the anomaly score for data X_in
     """
-    def __init__(self, X, ntrees, sample_size, limit=None, ExtensionLevel=0, random_state=None):
+    def __init__(self, X, ntrees, sample_size, limit=None, ExtensionLevel=0, random_state=None, calculate_scores=True, contamination=None):
         """
-        iForest(X, ntrees,  sample_size, limit=None, ExtensionLevel=0)
+        iForest(X, ntrees,  sample_size, limit=None, ExtensionLevel=0, random_state=None, calculate_scores=True, contamination=None)
         Initialize a forest by passing in training data, number of trees to be used and the subsample size.
 
         Parameters
@@ -76,38 +75,65 @@ class iForest(object):
             The maximum allowed tree depth. This is by default set to average length of unsucessful search in a binary tree.
         ExtensionLevel : int
             Specifies degree of freedom in choosing the hyperplanes for dividing up data. Must be smaller than the dimension n of the dataset.
+        random_state : int
+            Seed used for the generation of random numbers
+        calculate_scores : boolean
+            Flag to calculate the scores used to train the model (not needed if the decision threshold is set manually). Defaults as True.
+        contamination : float
+            The contamination is the quantile of data that is estimated to be anomalous 
         """
         # define random seed
         if random_state is not None:
             np.random.seed(random_state)
 
         self.ntrees = ntrees
-        self.threshold = 0.5
-        self.X = X
         self.nobjs = len(X)
         self.sample = sample_size
         self.Trees = []
         self.limit = limit
         self.exlevel = ExtensionLevel
-        self.CheckExtensionLevel()                                              # Extension Level check. See def for explanation.
+        self.CheckExtensionLevel(X)                                              # Extension Level check. See def for explanation.
         if limit is None:
             self.limit = int(np.ceil(np.log2(self.sample)))                     # Set limit to the default as specified by the paper (average depth of unsuccesful search through a binary tree).
         self.c = c_factor(self.sample)
+        
+        ix_sampled = set()                                                      # This stores the indices of the training samples
         for i in range(self.ntrees):                                            # This loop builds an ensemble of iTrees (the forest).
             ix = rn.sample(range(self.nobjs), self.sample)
+            ix_sampled = ix_sampled.union(ix)                                   # This updates the indices of the training samples set
             X_p = X[ix]
             self.Trees.append(iTree(X_p, 0, self.limit, exlevel=self.exlevel))
 
-    def CheckExtensionLevel(self):
+        ix_sampled = list(ix_sampled)                                           # Convert to list
+        # Score samples
+        if calculate_scores:
+            self.scores = self.score_samples(X[ix_sampled])                     # Evaluates only the examples used to build the trees
+
+        # Propose decision threshold based on contamination
+        if contamination is not None:
+            self.update_threshold(contamination)
+        else:
+            self.contamination = None
+            self.threshold = 0.5
+
+    def CheckExtensionLevel(self, X):
         """
         This function makes sure the extension level provided by the user does not exceed the dimension of the data. An exception will be raised in the case of a violation.
         """
-        dim = self.X.shape[1]
+        dim = X.shape[1]
         if self.exlevel < 0:
             raise Exception("Extension level has to be an integer between 0 and "+ str(dim-1)+".")
         if self.exlevel > dim-1:
             raise Exception("Your data has "+ str(dim) + " dimensions. Extension level can't be higher than " + str(dim-1) + ".")
 
+    def update_threshold(self, contamination):
+        """
+        Updates the threshold provided that the scores are calculated the new contamination parameter.
+        """
+        if self.scores is not None:
+            self.contamination = contamination
+            self.threshold = np.quantile(np.array(self.scores), 1 - contamination)
+    
     def compute_paths(self, X_in = None):
         """
         compute_paths(X_in = None)
@@ -123,10 +149,8 @@ class iForest(object):
         float
             Anomaly score for a given data point.
         """
-        if X_in is None:
-            X_in = self.X
         S = np.zeros(len(X_in))
-        for i in  range(len(X_in)):
+        for i in range(len(X_in)):
             h_temp = 0
             for j in range(self.ntrees):
                 h_temp += PathFactor(X_in[i],self.Trees[j]).path*1.0            # Compute path length for each point
@@ -187,7 +211,6 @@ class Node(object):
         """
         self.e = e
         self.size = len(X)
-        self.X = X # to be removed
         self.n = n
         self.p = p
         self.left = left
@@ -248,9 +271,8 @@ class iTree(object):
         """
         self.exlevel = exlevel
         self.e = e
-        self.X = X                                                              #save data for now. Not really necessary.
         self.size = len(X)
-        self.dim = self.X.shape[1]
+        self.dim = X.shape[1]
         self.Q = np.arange(np.shape(X)[1], dtype='int')                         # n dimensions
         self.l = l
         self.p = None                                                           # Intercept for the hyperplane for splitting data at a given node.
